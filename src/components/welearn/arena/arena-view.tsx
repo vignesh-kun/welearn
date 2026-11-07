@@ -22,6 +22,7 @@ import { api, type SessionUser } from "@/lib/session"
 import { cn } from "@/lib/utils"
 import { PinDialog } from "@/components/welearn/pin-dialog"
 import { StarsInline } from "@/components/welearn/star-rating"
+import { GDView } from "@/components/welearn/gd-view"
 import { RoomView } from "./room-view"
 import {
   MODE_META, STATUS_META, fmtDur,
@@ -170,10 +171,16 @@ export function ArenaView({ user, onPointsEarned }: { user: SessionUser; onPoint
       </div>
 
       <Tabs defaultValue="board">
-        <TabsList>
-          <TabsTrigger value="board">Sessions Board</TabsTrigger>
-          <TabsTrigger value="profile">My Arena Profile</TabsTrigger>
+        <TabsList className="grid grid-cols-3 max-w-md w-full">
+          <TabsTrigger value="board">Live Battle Rooms</TabsTrigger>
+          <TabsTrigger value="solo">Solo Sparring</TabsTrigger>
+          <TabsTrigger value="profile">Arena Elo Profile</TabsTrigger>
         </TabsList>
+
+        {/* ————— Solo sparring booth ————— */}
+        <TabsContent value="solo" className="mt-4">
+          <GDView user={user} onPointsEarned={onPointsEarned} />
+        </TabsContent>
 
         {/* ————— Sessions board ————— */}
         <TabsContent value="board" className="space-y-5 mt-4">

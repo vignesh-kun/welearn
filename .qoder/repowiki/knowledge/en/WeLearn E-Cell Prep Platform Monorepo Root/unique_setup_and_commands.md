@@ -1,0 +1,1 @@
+`npm run postinstall` runs `prisma generate` automatically after install; `npm run db:migrate-all` executes the SQLite→Supabase migration script; `npm run db:seed` and `db:seed-words` seed the database; `npm run dev/build/start/lint` are standard Next.js commands.

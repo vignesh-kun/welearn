@@ -1,0 +1,4 @@
+- Theme selection is driven by setting `document.documentElement.dataset.theme` to a string key, with the `.dark` class toggled based on whether the key belongs to the dark palette list.
+- Each visual theme is defined as a `[data-theme="<key>"]` selector block declaring the full set of CSS custom properties (`--background`, `--foreground`, `--primary`, `--card`, `--sidebar-*`, `--chart-*`, etc.) so components consume design tokens rather than raw colors.
+- Fonts are loaded via `next/font/google` and exposed as CSS variables (`--font-display`, `--font-body`, `--font-mono-nums`) applied through the `variable:` option, then composed into Tailwind's `--font-sans` / `--font-mono` aliases in the `@theme inline` block.
+- Animations use `color-mix(in oklab, ...)` with semantic CSS variables for color composition, and all motion effects are disabled under `prefers-reduced-motion: reduce`.

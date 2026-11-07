@@ -1,0 +1,11 @@
+schema_version: 1
+module_path: scripts_and_tests
+title: Dev Scripts, Seeders & E2E/Build Tests
+scope:
+    - scripts/
+    - tests/
+source_files: []
+depends_on: []
+related_to:
+    - path: app_shell
+    - path: database_schema

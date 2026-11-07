@@ -1,0 +1,1 @@
+Defines the application's PostgreSQL data model via Prisma schema and ships corresponding SQL migrations plus a Supabase local dev configuration for the WeLearn platform.

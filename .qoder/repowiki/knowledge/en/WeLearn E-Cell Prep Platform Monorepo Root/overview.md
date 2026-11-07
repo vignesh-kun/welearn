@@ -1,0 +1,1 @@
+Root of the WeLearn platform that wires a Next.js app shell, Prisma/Supabase data layer, and dev/test scripts into a single TypeScript monorepo with shadcn/ui components.

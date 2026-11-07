@@ -1,0 +1,1 @@
+Next.js 16 / React 19 / TypeScript (ES2017 target, bundler module resolution), Prisma 6 with Supabase PostgreSQL, shadcn/ui (New York style, lucide icons), Tailwind CSS v4, TanStack Query & Table, Zustand, Zod, next-auth, next-intl, framer-motion, react-hook-form.

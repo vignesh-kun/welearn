@@ -1,0 +1,1 @@
+Node/TypeScript scripts and shell tests that seed data, migrate SQLite to Supabase, run Arena smoke/E2E flows, and validate the Python/database runtime build pipeline.

@@ -1,0 +1,1 @@
+Root layout, page entry point, and global styles for the WeLearn E-Cell prep platform — bootstraps fonts, theme engine, ambient background, toast notifications, and the authenticated app shell.

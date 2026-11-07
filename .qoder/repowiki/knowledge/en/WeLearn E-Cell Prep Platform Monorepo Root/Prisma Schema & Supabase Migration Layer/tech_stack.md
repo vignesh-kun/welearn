@@ -1,0 +1,1 @@
+Prisma ORM with `prisma-client-js` targeting PostgreSQL; Supabase CLI project configured for Postgres 17, Realtime, Auth, Edge Runtime (Deno 2), Storage with S3 protocol, and pg-delta for schema diffs.

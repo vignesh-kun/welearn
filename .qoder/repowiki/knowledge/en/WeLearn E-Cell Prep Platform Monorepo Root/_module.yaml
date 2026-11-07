@@ -1,0 +1,23 @@
+schema_version: 1
+module_path: ""
+title: WeLearn E-Cell Prep Platform Monorepo Root
+scope:
+    - README.md
+    - AGENTS.md
+    - SETUP (2).md
+    - .gitignore
+    - .vercelignore
+    - package.json
+    - package-lock.json
+    - next.config.ts
+    - tsconfig.json
+    - tailwind.config.ts
+    - components.json
+    - eslint.config.mjs
+    - postcss.config.mjs
+    - vercel.json
+    - Caddyfile
+    - project-structure.txt
+source_files: []
+depends_on: []
+related_to: []

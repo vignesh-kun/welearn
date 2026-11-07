@@ -1,0 +1,10 @@
+schema_version: 1
+module_path: database_schema
+title: Prisma Schema & Supabase Migration Layer
+scope:
+    - prisma/
+    - supabase/
+source_files: []
+depends_on: []
+related_to:
+    - path: scripts_and_tests

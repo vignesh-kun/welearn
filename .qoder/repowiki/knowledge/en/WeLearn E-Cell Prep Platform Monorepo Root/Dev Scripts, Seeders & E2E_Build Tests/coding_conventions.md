@@ -1,0 +1,4 @@
+- Seeders and migrations use Prisma `upsert` keyed on a stable natural field (`id`, `slug`, `externalId`, `term`) so re-running is safe and idempotent.
+- E2E test scripts drive the API exclusively through a local `fetch` helper (`api` / `j` / `post`) against `BASE = http://localhost:3000` and assert outcomes by checking response status codes and JSON fields rather than using a test framework.
+- Shell tests isolate each scenario in a `mktemp -d` directory, set `PROJECT_DIR` and `BUILD_DIR` env vars, invoke the target script under `.zscripts/`, then assert file existence and contents before cleaning up via a `trap 'rm -rf "$TEST_ROOT"' EXIT`.
+- Migration DDL uses `CREATE TABLE IF NOT EXISTS` plus per-column `ALTER TABLE ... ADD COLUMN IF NOT EXISTS` and wraps every `ALTER TABLE ... ADD CONSTRAINT` in a `DO $$ BEGIN ... EXCEPTION WHEN duplicate_object THEN NULL; END $$;` block to make the whole schema script idempotent.

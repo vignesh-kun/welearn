@@ -1,0 +1,7 @@
+- Every model uses a `cuid()`-generated UUID as its primary key and an `@default(now()) createdAt` timestamp, with optional `@updatedAt updatedAt` on stateful records.
+- Foreign-key relationships are declared with explicit `@relation(fields:[...], references:[...], onDelete: Cascade)` blocks rather than relying on implicit conventions.
+- Composite uniqueness constraints on join tables use `@@unique([...])` (e.g. `[userId, caseId]`, `[questionId, userId]`, `[crosswordId, wordId]`, `[roomId, userId]`).
+- Frequently queried foreign keys get dedicated `@@index([...])` declarations (e.g. `[userId, createdAt]`, `[puzzleId]`, `[trackId, type]`).
+- JSON-bearing columns are typed as `String` with inline comments documenting the expected shape (e.g. `options String // JSON string[]`, `keyMetrics String // JSON array of {label, value}`).
+- Enumerated fields are stored as plain `String` with a comment listing allowed values (e.g. `role String // "member" | "admin"`, `difficulty String @default("medium") // easy | medium | hard`).
+- Supabase migration files follow a timestamp-prefixed naming scheme (`YYYYMMDDHHMMSS_description.sql`) and use `DROP TABLE IF EXISTS ... CASCADE; CREATE TABLE ...` idempotent patterns.

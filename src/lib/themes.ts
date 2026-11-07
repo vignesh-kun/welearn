@@ -1,7 +1,10 @@
-"use client"
-
-// WeLearn theme engine — 10 VS Code-grade palettes.
-// Persisted in localStorage, applied via data-theme + legacy .dark class sync.
+// WeLearn theme engine — ten palettes shared by the client runtime and by the
+// pre-paint bootstrap in src/app/layout.tsx.
+//
+// This module is intentionally framework-neutral (no "use client", no hooks) so
+// both server and client code can read the single source of truth. Persistence
+// stays in localStorage under THEME_STORAGE_KEY and is applied via the
+// `data-theme` attribute plus the legacy `.dark` class.
 
 export interface ThemeDef {
   id: string
@@ -23,15 +26,25 @@ export const THEMES: ThemeDef[] = [
   { id: "everglades", name: "Everglades", dark: true, swatch: ["#0f1c19", "#34d399", "#a3e635"] },
 ]
 
-const KEY = "welearn.theme.v2"
+/** Persisted theme choice. Never rename — it is the pre-paint restoration key. */
+export const THEME_STORAGE_KEY = "welearn.theme.v2"
 export const DEFAULT_THEME = "dark-plus"
+export const THEME_IDS: string[] = THEMES.map((t) => t.id)
+export const DARK_THEME_IDS: string[] = THEMES.filter((t) => t.dark).map((t) => t.id)
+
+/** Resolve any stored string to a real theme, falling back to the default. */
+export function themeById(id: string | null | undefined): ThemeDef {
+  return THEMES.find((t) => t.id === id) ?? THEMES[0]
+}
 
 export function applyTheme(id: string) {
-  const def = THEMES.find((t) => t.id === id) ?? THEMES[0]
-  document.documentElement.dataset.theme = def.id
-  document.documentElement.classList.toggle("dark", def.dark)
+  if (typeof document === "undefined") return
+  const def = themeById(id)
+  const root = document.documentElement
+  root.dataset.theme = def.id
+  root.classList.toggle("dark", def.dark)
   try {
-    localStorage.setItem(KEY, def.id)
+    localStorage.setItem(THEME_STORAGE_KEY, def.id)
   } catch {
     // storage disabled — session-only theme
   }
@@ -39,8 +52,38 @@ export function applyTheme(id: string) {
 
 export function storedTheme(): string {
   try {
-    return localStorage.getItem(KEY) ?? DEFAULT_THEME
+    const item = localStorage.getItem(THEME_STORAGE_KEY)
+    if (item) return themeById(item).id
+    if (typeof window !== "undefined" && window.matchMedia && window.matchMedia("(prefers-color-scheme: light)").matches) {
+      return "light-plus"
+    }
+    return DEFAULT_THEME
   } catch {
     return DEFAULT_THEME
   }
+}
+
+/**
+ * Inline script running before first paint: restores the stored palette so the
+ * app never flashes the wrong theme, defaulting to system preference if unset.
+ */
+export function themeBootstrapScript(): string {
+  return `(function(){try{
+var k=${JSON.stringify(THEME_STORAGE_KEY)},d=${JSON.stringify(DEFAULT_THEME)};
+var ids=${JSON.stringify(THEME_IDS)},dark=${JSON.stringify(DARK_THEME_IDS)};
+var t=localStorage.getItem(k);
+if(!t){
+  if(window.matchMedia&&window.matchMedia("(prefers-color-scheme: light)").matches) t="light-plus";
+  else t=d;
+} else if(ids.indexOf(t)===-1){
+  t=d;
+}
+var r=document.documentElement;
+r.dataset.theme=t;
+r.classList.toggle("dark",dark.indexOf(t)!==-1);
+}catch(e){
+var r=document.documentElement;
+r.dataset.theme=${JSON.stringify(DEFAULT_THEME)};
+r.classList.add("dark");
+}})();`
 }

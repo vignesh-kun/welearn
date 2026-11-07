@@ -1,0 +1,1 @@
+Next.js App Router with `next/font/google` for font loading; Tailwind v4 (`@import "tailwindcss"`) plus `tw-animate-css`; CSS custom properties drive a ten-palette theme engine selected via `data-theme` on `<html>`.

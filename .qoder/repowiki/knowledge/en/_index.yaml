@@ -1,0 +1,69 @@
+# 知识卡导出索引文件
+schema_version: 1
+locale: en-US
+branch: main
+nodes_managed: true
+exported_at: "2026-11-07T07:24:47Z"
+modules:
+    "":
+        dir_name: WeLearn E-Cell Prep Platform Monorepo Root
+        title: WeLearn E-Cell Prep Platform Monorepo Root
+        scope:
+            - README.md
+            - AGENTS.md
+            - SETUP (2).md
+            - .gitignore
+            - .vercelignore
+            - package.json
+            - package-lock.json
+            - next.config.ts
+            - tsconfig.json
+            - tailwind.config.ts
+            - components.json
+            - eslint.config.mjs
+            - postcss.config.mjs
+            - vercel.json
+            - Caddyfile
+            - project-structure.txt
+        source_files: []
+        children:
+            - app_shell
+            - database_schema
+            - scripts_and_tests
+        depends_on: []
+        related_to: []
+    app_shell:
+        dir_name: Next.js App Shell & Root Layout
+        title: Next.js App Shell & Root Layout
+        scope:
+            - src/app/layout.tsx
+            - src/app/page.tsx
+            - src/app/globals.css
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: scripts_and_tests
+    database_schema:
+        dir_name: Prisma Schema & Supabase Migration Layer
+        title: Prisma Schema & Supabase Migration Layer
+        scope:
+            - prisma/
+            - supabase/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: scripts_and_tests
+    scripts_and_tests:
+        dir_name: Dev Scripts, Seeders & E2E_Build Tests
+        title: Dev Scripts, Seeders & E2E/Build Tests
+        scope:
+            - scripts/
+            - tests/
+        source_files: []
+        children: []
+        depends_on: []
+        related_to:
+            - path: app_shell
+            - path: database_schema

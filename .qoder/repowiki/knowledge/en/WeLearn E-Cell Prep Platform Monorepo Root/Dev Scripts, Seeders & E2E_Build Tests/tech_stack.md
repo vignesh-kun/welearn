@@ -1,0 +1,1 @@
+Node.js ESM (`.mjs`) and TypeScript (`.ts`) scripts using `@prisma/client` for DB access and `node:sqlite`'s `DatabaseSync` for the SQLite→Postgres migration; shell tests rely on `docker` for containerised verification of the Python runtime build.

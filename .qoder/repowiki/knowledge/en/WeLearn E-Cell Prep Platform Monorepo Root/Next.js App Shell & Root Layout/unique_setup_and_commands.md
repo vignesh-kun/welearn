@@ -1,0 +1,1 @@
+The theme bootstrap script expects `localStorage.welearn.theme.v2` to hold one of the known theme keys (`dark-plus`, `pink-moon`, `yellow-nitro`, `dracula`, `monokai-pro`, `one-dark`, `abyss`, `synthwave-84`, `everglades`); if missing it defaults to `dark-plus`.

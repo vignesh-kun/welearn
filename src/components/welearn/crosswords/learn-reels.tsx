@@ -574,15 +574,15 @@ export function LearnReels({
                       )}
                     </div>
 
-                    <div className="flex-1 grid place-items-center py-8">
+                    <div className="flex-1 grid place-items-center py-8 [perspective:1000px]">
                       <AnimatePresence mode="wait">
                         <motion.div
                           key={flipped ? "back" : "front"}
                           initial={{ opacity: 0, rotateY: 90 }}
                           animate={{ opacity: 1, rotateY: 0 }}
                           exit={{ opacity: 0, rotateY: -90 }}
-                          transition={{ duration: 0.28 }}
-                          className="text-center px-2"
+                          transition={{ duration: 0.28, ease: "easeOut" }}
+                          className="text-center px-2 [transform-style:preserve-3d]"
                         >
                           {!flipped ? (
                             <>

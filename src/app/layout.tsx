@@ -3,6 +3,7 @@ import { Space_Grotesk, Plus_Jakarta_Sans, JetBrains_Mono } from "next/font/goog
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { AmbientBackground } from "@/components/welearn/ambient-background"
+import { DEFAULT_THEME, themeBootstrapScript } from "@/lib/themes"
 
 // Display font for headings — geometric, modern, not "robotic"
 const display = Space_Grotesk({
@@ -36,17 +37,15 @@ export const metadata: Metadata = {
   },
 }
 
+// Browser chrome tint follows the default palette; the in-app themes take over
+// the document surface itself.
 export const viewport: Viewport = {
-  themeColor: "#0b1512",
+  themeColor: "#1e1e1e",
 }
 
-// Pre-paint theme bootstrap — kills the theme flash before hydration.
-const THEME_BOOTSTRAP = `(function(){try{
-var t=localStorage.getItem("welearn.theme.v2")||"dark-plus";
-var dark=["dark-plus","pink-moon","yellow-nitro","dracula","monokai-pro","one-dark","abyss","synthwave-84","everglades"];
-document.documentElement.dataset.theme=t;
-document.documentElement.classList.toggle("dark",dark.indexOf(t)!==-1);
-}catch(e){document.documentElement.dataset.theme="dark-plus";document.documentElement.classList.add("dark");}})();`
+// Pre-paint theme bootstrap — generated from the single theme registry in
+// src/lib/themes.ts so palette ids can never drift out of sync again.
+const THEME_BOOTSTRAP = themeBootstrapScript()
 
 export default function RootLayout({
   children,
@@ -54,13 +53,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" suppressHydrationWarning data-theme="dark-plus" className="dark">
+    <html lang="en" suppressHydrationWarning data-theme={DEFAULT_THEME} className="dark">
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_BOOTSTRAP }} />
       </head>
       <body
         className={`${display.variable} ${body.variable} ${monoNums.variable} antialiased bg-background text-foreground min-h-screen flex flex-col`}
       >
+        <a href="#main-content" className="wl-skip-link">
+          Skip to content
+        </a>
         <AmbientBackground />
         {children}
         <Toaster />
