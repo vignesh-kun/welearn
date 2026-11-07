@@ -1,6 +1,7 @@
 import { db } from "@/lib/db"
 import { hashPin, isValidName, isValidPin } from "@/lib/auth"
 import { jsonError } from "@/lib/helpers"
+import { ensureDbReady } from "@/lib/auto-migrate"
 
 export async function POST(req: Request) {
   try {
@@ -10,6 +11,9 @@ export async function POST(req: Request) {
 
     if (!isValidName(name)) return jsonError("Name must be 2–40 characters (no < > { })")
     if (!isValidPin(pin)) return jsonError("PIN must be exactly 4 digits")
+
+    // Automatically bootstrap database schema and tables if Supabase is brand new/empty
+    await ensureDbReady()
 
     const users = await db.user.findMany({ select: { id: true, name: true } })
     if (users.some((u) => u.name.toLowerCase() === name.toLowerCase()))

@@ -1,5 +1,6 @@
 import { db } from "@/lib/db"
 import { jsonError, istDayKey } from "@/lib/helpers"
+import { ensureDbReady } from "@/lib/auto-migrate"
 import {
   pickNextCard,
   ensureProfile,
@@ -19,6 +20,8 @@ export async function GET(req: Request) {
     const url = new URL(req.url)
     const userId = url.searchParams.get("userId")
     if (!userId) return jsonError("userId required")
+
+    await ensureDbReady()
 
     // Trigger daily 5-word expansion check (runs at most once per IST day)
     ensureDailyWordExpansion(userId).catch(() => {})
