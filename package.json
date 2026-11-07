@@ -3,10 +3,10 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "npm --prefix \"welearn (2)\" run dev",
-    "build": "npm --prefix \"welearn (2)\" run build",
-    "start": "npm --prefix \"welearn (2)\" start",
-    "lint": "npm --prefix \"welearn (2)\" run lint"
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint"
   }
 }
 
