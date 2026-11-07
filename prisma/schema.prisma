@@ -2,12 +2,10 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// SQLite in this sandbox. For Supabase/Vercel deployment:
-// change provider to "postgresql" and point DATABASE_URL to your
-// Supabase connection string, then run `bun run db:push`.
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 model User {

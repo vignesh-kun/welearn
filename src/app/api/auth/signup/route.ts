@@ -24,7 +24,8 @@ export async function POST(req: Request) {
     })
 
     return Response.json({ id: user.id, name: user.name, role: user.role })
-  } catch {
-    return jsonError("Signup failed — please try again", 500)
+  } catch (err: any) {
+    console.error("Signup error:", err)
+    return jsonError(err?.message || "Signup failed — please try again", 500)
   }
 }

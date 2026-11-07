@@ -9,6 +9,7 @@
     "lint": "next lint",
     "postinstall": "prisma generate",
     "db:push": "prisma db push",
+    "db:migrate-all": "tsx scripts/migrate-sqlite-to-supabase.ts",
     "db:seed": "tsx scripts/seed.ts",
     "db:seed-words": "tsx scripts/seed-words.ts"
   },
