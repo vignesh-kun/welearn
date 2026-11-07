@@ -1,0 +1,642 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+// SQLite in this sandbox. For Supabase/Vercel deployment:
+// change provider to "postgresql" and point DATABASE_URL to your
+// Supabase connection string, then run `bun run db:push`.
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  pin       String // 4-digit PIN, stored as sha256 hash
+  role      String   @default("member") // "member" | "admin"
+  createdAt DateTime @default(now())
+
+  attempts   PuzzleAttempt[]
+  activities Activity[]
+  caseProgs  CaseProgress[]
+  termRefs   TermReview[]
+  gdSessions GDSession[]
+  gdRooms    GdParticipant[]
+  videoWatches VideoWatch []
+  videoQuizAnswers VideoQuizAnswer[]
+  videoQuizQuestions VideoQuizQuestion[]
+  founderAnswers FounderCaseAnswer[]
+  pptUploads PptUpload[]
+  pptRatings2 PptRating[]
+  answerRatings2 AnswerRating[]
+
+  // —— Crossforge (Crosswords + flashcard memory engine) ——
+  wordProgress    WordProgress[]
+  wordLogs        WordLog[]
+  crosswordSolves CrosswordSolve[]
+  memoryProfile   MemoryProfile?
+
+  // —— Arena gamification (Elo profile) ——
+  gdElo           Int      @default(1200) // scale 1000–3000, everyone starts at 1200
+  gdsPlayed       Int      @default(0)
+  gdStreak        Int      @default(0)
+  lastGdDate      String? // IST day key YYYY-MM-DD
+  gdContentSum    Float    @default(0) // cumulative avg peer-rating per canonical axis
+  gdDeliverySum   Float    @default(0)
+  gdListeningSum  Float    @default(0)
+  gdLeadershipSum Float    @default(0)
+  gdRatingsCount  Int      @default(0) // how many finalized sessions fed the sums
+}
+
+model Puzzle {
+  id          String   @id @default(cuid())
+  externalId  String   @unique
+  type        String // math | logic | operations | estimation | strategy
+  title       String
+  statement   String
+  options     String // JSON string[]
+  answer      Int // index of correct option
+  explanation String
+  difficulty  String   @default("medium") // easy | medium | hard
+  points      Int      @default(10)
+  source      String   @default("curated") // curated | ai
+  createdAt   DateTime @default(now())
+
+  attempts PuzzleAttempt[]
+}
+
+model PuzzleAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  puzzleId  String
+  selected  Int // chosen option index, -1 = timed out
+  correct   Boolean
+  timeSpent Int // seconds
+  points    Int      @default(0)
+  timedOut  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  puzzle Puzzle @relation(fields: [puzzleId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([puzzleId])
+}
+
+model CaseStudy {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  startup     String
+  tagline     String
+  sector      String
+  youtubeId   String
+  description String
+  keyMetrics  String // JSON array of {label, value}
+  discussion  String // JSON array of E-Cell PPT prep prompts
+  source      String   @default("curated") // curated | ai
+  createdAt   DateTime @default(now())
+
+  progs CaseProgress[]
+}
+
+model CaseProgress {
+  id        String   @id @default(cuid())
+  userId    String
+  caseId    String
+  status    String   @default("watching") // watching | analysed | deck_ready
+  notes     String?
+  updatedAt DateTime @updatedAt @default(now())
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  caseStudy CaseStudy @relation(fields: [caseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, caseId])
+}
+
+model Term {
+  id        String   @id @default(cuid())
+  abbr      String
+  full      String
+  category  String
+  meaning   String
+  usage     String
+  // — Founder-context flip-side (used by the upgraded flashcards)
+  ecellDefinition String? // 1-line E-Cell tailored definition
+  startupContext  String? // real startup success/failure story showing why it matters
+  keyWarning      String? // cautionary "never do this" note
+  source    String   @default("curated") // curated | ai
+  createdAt DateTime @default(now())
+
+  refs TermReview[]
+}
+
+// ————————————————————————————————————————————
+// Founder Quiz — Scenario / Red-Flag / Micro-Math / Pitch-Pairing training
+// Drives the new "Founder Quiz" tab in the left nav.
+// ————————————————————————————————————————————
+
+model QuizTrack {
+  id          String   @id @default(cuid())
+  slug        String   @unique // investment | growth | ops_legal | product_tech | strategy
+  name        String
+  shortName   String
+  description String
+  accent      String   // tailwind-safe hex used on cards/badges
+  iconName    String   // lucide icon name
+  sortOrder   Int      @default(0)
+
+  questions QuizQuestion[]
+  badges    QuizBadge[]
+}
+
+model QuizQuestion {
+  id           String   @id @default(cuid())
+  trackId      String
+  type         String // scenario | red_flag | micro_math | pitch_pairing
+  scenario     String // the founder-mode prompt / pitch-deck excerpt / calculation problem
+  options      String // JSON string[] (for pitch_pairing this is the 3 term slugs)
+  answer       Int     @default(0) // correct option index (pitch_pairing stores 0)
+  explanation  String // why this answer is right
+  founderNote  String? // "Takeaway: when a founder actually uses this..."
+  difficulty   String   @default("medium") // easy | medium | hard
+  points       Int      @default(10)
+  source       String   @default("curated") // curated | ai
+  createdAt    DateTime @default(now())
+
+  track    QuizTrack      @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  attempts QuizAttempt[]
+
+  @@index([trackId, type])
+  @@index([type])
+}
+
+model QuizAttempt {
+  id        String   @id @default(cuid())
+  userId    String
+  questionId String
+  type      String // denormalised for fast filtering
+  selected  Int // chosen option index, -1 = timed out / skipped
+  correct   Boolean
+  timeSpent Int // seconds
+  points    Int      @default(0)
+  timedOut  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  question QuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([questionId])
+}
+
+model QuizBadge {
+  id          String   @id @default(cuid())
+  slug        String   @unique
+  trackId     String? // null = cross-track badge
+  name        String
+  description String
+  iconName    String
+  criteria    String // JSON: { kind, threshold } e.g. {"kind":"track_correct","threshold":3}
+  accent      String
+
+  track     QuizTrack?      @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  userBadges QuizUserBadge[]
+
+  @@index([trackId])
+}
+
+model QuizUserBadge {
+  id        String   @id @default(cuid())
+  userId    String
+  badgeId   String
+  awardedAt DateTime @default(now())
+
+  badge QuizBadge @relation(fields: [badgeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, badgeId])
+  @@index([userId])
+}
+
+// Pitch & Term Pairing — Roleplay prompt engine (Method 4).
+// Stores the 3 random terms the user was given and the elevator pitch they wrote.
+model PitchAttempt {
+  id         String   @id @default(cuid())
+  userId     String
+  termIds    String // JSON string[] of Term.id
+  termLabels String // JSON string[] of {abbr, full} for archival display
+  pitchText  String
+  wordCount  Int
+  durationSec Int    @default(0)
+  points     Int      @default(15)
+  createdAt  DateTime @default(now())
+
+  @@index([userId, createdAt])
+}
+
+model TermReview {
+  id         String   @id @default(cuid())
+  userId     String
+  termId     String
+  known      Boolean
+  reviewedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  term Term @relation(fields: [termId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, termId])
+}
+
+model GDSession {
+  id          String   @id @default(cuid())
+  userId      String
+  topic       String
+  category    String // gd | debate
+  stance      String? // for | against | neutral
+  durationSec Int      @default(0)
+  notes       String?
+  createdAt   DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+}
+
+model Activity {
+  id        String   @id @default(cuid())
+  userId    String
+  module    String // puzzles | cases | gd | arena | quiz | videos | foundercase | ppt
+  action    String // e.g. puzzle_solved, case_deck_ready, gd_practiced, term_learned
+  detail    String?
+  points    Int      @default(0)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([createdAt])
+}
+
+// ————————————————————————————————————————————
+// ARENA — real-time multi-mode battle room (GD / Debate / Pitch)
+// Lifecycle: lobby → live → rating → ended
+// Timers are OPTIONAL: liveSec/ratingSec = 0 means untimed (host ends manually).
+// ————————————————————————————————————————————
+
+model GdRoom {
+  id          String    @id @default(cuid())
+  title       String
+  mode        String    @default("gd") // gd | debate | pitch
+  topic       String? // broadcast by the host when going live
+  status      String    @default("lobby") // lobby | live | rating | ended
+  hostId      String // creator User.id (host privileges)
+  liveSec     Int       @default(0) // 0 = untimed, host ends manually
+  ratingSec   Int       @default(0) // 0 = untimed, host (or all-submitted) closes
+  phaseEndsAt DateTime? // server-authoritative deadline of the current phase
+  createdAt   DateTime  @default(now())
+  endedAt     DateTime?
+  momJson     String? // JSON Minutes-of-Meeting payload, written at finalize
+
+  participants GdParticipant[]
+  ratings      GdRating[]
+
+  @@index([status, createdAt])
+}
+
+model GdParticipant {
+  id            String    @id @default(cuid())
+  roomId        String
+  userId        String
+  isCoHost      Boolean   @default(false)
+  stance        String? // for | against | moderator (debate mode only)
+  stanceAt      DateTime?
+  keyArgument   String? // each participant's main point, revealed in MoM
+  leftAt        DateTime?
+  joinedAt      DateTime  @default(now())
+  lastSeen      DateTime? // heartbeat from the state poll
+  // finalized results (null until the room ends)
+  aspectAvgs    String? // JSON {aspectKey: avgStars} e.g. {"content":4.2,"clarity":3.8}
+  avgOverall    Float?
+  eloDelta      Int?
+  eloAfter      Int?
+  badges        String? // JSON string[] e.g. ["MVP", "Content Star"]
+  pointsAwarded Int?
+
+  room GdRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, userId])
+  @@index([userId])
+}
+
+model GdRating {
+  id        String   @id @default(cuid())
+  roomId    String
+  raterId   String // User.id
+  rateeId   String // User.id
+  aspects   String // JSON {aspectKey: stars 1-5} — mode-specific aspects
+  remark    String? // free-text peer remark, shown on the ratee's profile
+  createdAt DateTime @default(now())
+
+  room GdRoom @relation(fields: [roomId], references: [id], onDelete: Cascade)
+
+  @@unique([roomId, raterId, rateeId])
+  @@index([roomId])
+}
+
+// ————————————————————————————————————————————
+// VIDEO ZONE — shared YouTube library with peer-quiz learning loop
+// Flow: watch → answer ALL peer quizzes (mandatory) → post own 3 questions → tick watched
+// ————————————————————————————————————————————
+
+model CaseVideo {
+  id          String   @id @default(cuid())
+  title       String
+  youtubeId   String
+  description String?
+  addedById   String // User.id (any member; add gated by team PIN)
+  source      String   @default("curated") // curated (seeded from case studies) | member
+  createdAt   DateTime @default(now())
+
+  watches  VideoWatch[]
+  questions VideoQuizQuestion[]
+
+  @@index([createdAt])
+}
+
+model VideoWatch {
+  id        String   @id @default(cuid())
+  userId    String
+  videoId   String
+  watched   Boolean  @default(false) // the tick — only settable after the full flow
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt @default(now())
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  video CaseVideo  @relation(fields: [videoId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, videoId])
+}
+
+model VideoQuizQuestion {
+  id        String   @id @default(cuid())
+  videoId   String
+  creatorId String
+  text      String
+  options   String // JSON string[4]
+  answer    Int // correct option index 0-3
+  createdAt DateTime @default(now())
+
+  video    CaseVideo        @relation(fields: [videoId], references: [id], onDelete: Cascade)
+  creator  User             @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  answers  VideoQuizAnswer[]
+
+  @@index([videoId])
+}
+
+model VideoQuizAnswer {
+  id         String   @id @default(cuid())
+  questionId String
+  userId     String
+  selected   Int
+  correct    Boolean
+  createdAt  DateTime @default(now())
+
+  question VideoQuizQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user     User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([questionId, userId])
+  @@index([userId])
+}
+
+// ————————————————————————————————————————————
+// FOUNDER CASES — "if you were the founder…" prompts
+// AI or member-posted question → 150-char answers → peer star ratings
+// ————————————————————————————————————————————
+
+model FounderCaseQuestion {
+  id          String   @id @default(cuid())
+  prompt      String // the "what would you do?" scenario
+  source      String   @default("ai") // ai | member | curated
+  createdById String? // User.id when member-posted
+  createdAt   DateTime @default(now())
+
+  answers FounderCaseAnswer[]
+
+  @@index([createdAt])
+}
+
+model FounderCaseAnswer {
+  id         String   @id @default(cuid())
+  questionId String
+  userId     String
+  text       String // ≤150 chars
+  createdAt  DateTime @default(now())
+
+  question FounderCaseQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  user     User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ratings  AnswerRating[]
+
+  @@unique([questionId, userId])
+  @@index([userId])
+}
+
+model AnswerRating {
+  id        String   @id @default(cuid())
+  answerId  String
+  raterId   String
+  stars     Int // 1-5
+  createdAt DateTime @default(now())
+
+  answer FounderCaseAnswer @relation(fields: [answerId], references: [id], onDelete: Cascade)
+  rater  User              @relation(fields: [raterId], references: [id], onDelete: Cascade)
+
+  @@unique([answerId, raterId])
+}
+
+// ————————————————————————————————————————————
+// PPT CHALLENGES — AI/member topics → members build decks → upload → peer ratings
+// ————————————————————————————————————————————
+
+model PptChallenge {
+  id          String   @id @default(cuid())
+  topic       String
+  brief       String? // extra guidance (slides to include etc.)
+  source      String   @default("ai") // ai | member | curated
+  createdById String?
+  createdAt   DateTime @default(now())
+
+  uploads PptUpload[]
+
+  @@index([createdAt])
+}
+
+model PptUpload {
+  id          String   @id @default(cuid())
+  challengeId String
+  userId      String
+  title       String
+  fileName    String // stored under /public/uploads/ppts/
+  fileSize    Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  challenge PptChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  ratings   PptRating[]
+
+  @@index([challengeId])
+}
+
+model PptRating {
+  id        String   @id @default(cuid())
+  uploadId  String
+  raterId   String
+  stars     Int // 1-5
+  createdAt DateTime @default(now())
+
+  upload PptUpload @relation(fields: [uploadId], references: [id], onDelete: Cascade)
+  rater  User      @relation(fields: [raterId], references: [id], onDelete: Cascade)
+
+  @@unique([uploadId, raterId])
+}
+
+// ————————————————————————————————————————————
+// CROSSFORGE — 24/7 autonomous memory + infinite crossword engine
+// Word store (single source of truth) → per-user SRS state → activity logs
+// → memory profiler (SWOT / decay) → auto-generated crosswords
+// ————————————————————————————————————————————
+
+model Word {
+  id            String    @id @default(cuid())
+  term          String    @unique
+  definition    String
+  keyDefinition String? // short clue-safe line, used for crossword clues
+  category      String    @default("general") // finance | marketing | ops | strategy | legal | general
+  status        String    @default("new") // global hint; per-user state lives in WordProgress
+  source        String    @default("curated") // curated | ai | member
+  usedInCrosswords Int    @default(0)
+  lastUsedAt    DateTime?
+  createdAt     DateTime  @default(now())
+
+  progresses WordProgress[]
+  logs       WordLog[]
+  crosswordWords CrosswordWord[]
+
+  @@index([category])
+}
+
+// RemNote-style per-user knowledge tree state
+model WordProgress {
+  id           String    @id @default(cuid())
+  userId       String
+  wordId       String
+  status       String    @default("new") // new | learning | done
+  intervalDays Int       @default(0) // current SRS interval
+  ease         Float     @default(2.5) // SM-2 ease factor
+  dueAt        DateTime  @default(now())
+  lastSeenAt   DateTime?
+  timesSeen    Int       @default(0)
+  timesCorrect Int       @default(0)
+  heartsLost   Int       @default(0)
+  updatedAt    DateTime  @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  word Word @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, wordId])
+  @@index([userId, dueAt])
+  @@index([userId, status])
+}
+
+// Async event-bus analog — every flip / quiz answer / crossword letter batch lands here
+model WordLog {
+  id            String   @id @default(cuid())
+  userId        String
+  wordId        String
+  kind          String   // flip_known | flip_unknown | quiz_pass | quiz_fail | crossword_solved | crossword_missed | hint_used
+  correct       Boolean?
+  timeTakenSec  Int      @default(0)
+  hintsUsed     Int      @default(0)
+  wrongAttempts Int      @default(0)
+  meta          String? // JSON extras
+  createdAt     DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  word Word @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@index([userId, kind])
+  @@index([wordId])
+}
+
+// Dynamic crossword grid store — the infinite pool
+model Crossword {
+  id           String   @id @default(cuid())
+  title        String
+  difficulty   String   @default("medium") // easy | medium | hard
+  gridData     String // JSON {rows, cols, cells:[{r,c,solution,number}], entries:[{word,clue,row,col,dir,number,len}]}
+  wordIds      String // JSON string[]
+  mode         String   @default("daily") // daily | practice | scratch | personal
+  isPersonal   Boolean  @default(false) // generated for one user from their weak vault
+  forUserId    String?
+  timeLimitSec Int      @default(0) // 0 = untimed
+  isActive     Boolean  @default(true)
+  createdById  String? // member who pasted it manually
+  createdAt    DateTime @default(now())
+
+  words  CrosswordWord[]
+  solves CrosswordSolve[]
+
+  @@index([isActive, createdAt])
+}
+
+model CrosswordWord {
+  id          String @id @default(cuid())
+  crosswordId String
+  wordId      String
+
+  crossword Crossword @relation(fields: [crosswordId], references: [id], onDelete: Cascade)
+  wordRef   Word      @relation(fields: [wordId], references: [id], onDelete: Cascade)
+
+  @@unique([crosswordId, wordId])
+}
+
+// One solve record per user per crossword (upserted)
+model CrosswordSolve {
+  id             String   @id @default(cuid())
+  crosswordId    String
+  userId         String
+  completed      Boolean  @default(false)
+  correctLetters Int      @default(0)
+  totalLetters   Int      @default(0)
+  accuracy       Float    @default(0)
+  timeTakenSec   Int      @default(0)
+  hintsUsed      Int      @default(0)
+  wrongAttempts  Int      @default(0)
+  points         Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  crossword Crossword @relation(fields: [crosswordId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([crosswordId, userId])
+  @@index([userId, createdAt])
+}
+
+// 24/7 cognitive matrix — memory decay profiler + SWOT + hearts
+model MemoryProfile {
+  userId           String   @id
+  overallRetention Float    @default(0.85) // 0..1
+  recallVelocity   Float    @default(0) // avg seconds to recall
+  masteryCount     Int      @default(0)
+  weakVault        String   @default("[]") // JSON string[] word ids
+  strongVault      String   @default("[]") // JSON string[] word ids
+  categoryScores   String   @default("{}") // JSON {category: 0..100}
+  swot             String   @default("{}") // JSON {strengths[], weaknesses[], opportunities[], threats[]}
+  hearts           Int      @default(5) // 0..5 quiz lives
+  extraPoints      Int      @default(0) // overflow hearts → SWOT bonus
+  dailyLearned     Int      @default(0)
+  dailyDate        String? // IST day key YYYY-MM-DD
+  updatedAt        DateTime @default(now()) @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
