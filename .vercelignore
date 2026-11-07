@@ -1,0 +1,16 @@
+# SQLite DB - only used locally; Vercel uses PostgreSQL (Supabase)
+db/
+*.db
+*.db-journal
+
+# Dev logs
+dev.log
+dev.out.log
+server.log
+
+# Scripts - not needed in deployment
+scripts/
+
+# Tests
+tests/
+

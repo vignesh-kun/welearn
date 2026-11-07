@@ -5,7 +5,7 @@
 
 import { useCallback, useEffect, useState } from "react"
 import { motion } from "framer-motion"
-import { GraduationCap, Grid3x3, Brain, Settings2, RefreshCw } from "lucide-react"
+import { GraduationCap, Grid3x3, Brain, Settings2, RefreshCw, AlertTriangle } from "lucide-react"
 import { api, type SessionUser } from "@/lib/session"
 import { haptic } from "@/lib/haptics"
 import { cn } from "@/lib/utils"
@@ -27,16 +27,21 @@ export function CrosswordsView({ user, onPointsEarned }: { user: SessionUser; on
   const [pane, setPane] = useState<Pane>("learn")
   const [session, setSession] = useState<ForgeSession | null>(null)
   const [refreshing, setRefreshing] = useState(false)
+  const [sessionError, setSessionError] = useState(false)
 
   const refreshSession = useCallback(
     (exclude?: string[]) => {
       const q = exclude && exclude.length > 0 ? `&exclude=${exclude.join(",")}` : ""
+      setSessionError(false)
       api<ForgeSession>(`/api/forge/session?userId=${user.id}${q}`)
         .then((s) => {
           setSession(s)
+          setSessionError(false)
           if (s.crosswordUnlocked) haptic("unlock")
         })
-        .catch(() => {})
+        .catch(() => {
+          setSessionError(true)
+        })
     },
     [user.id],
   )
@@ -124,7 +129,21 @@ export function CrosswordsView({ user, onPointsEarned }: { user: SessionUser; on
 
       {/* panes */}
       <motion.div key={pane} initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
-        {pane === "learn" && (
+        {/* Session error state */}
+        {sessionError && pane === "learn" && (
+          <div className="glass-card rounded-3xl p-10 text-center space-y-4 border border-destructive/40">
+            <AlertTriangle className="size-10 mx-auto text-destructive" />
+            <p className="font-bold text-lg">Session Error</p>
+            <p className="text-sm text-muted-foreground">Could not load your learning session. Try refreshing.</p>
+            <button
+              onClick={() => { setRefreshing(true); refreshSession(); setTimeout(() => setRefreshing(false), 700) }}
+              className="press-pop mx-auto flex items-center gap-2 px-5 py-2 rounded-xl border border-primary/40 bg-primary/10 text-primary font-bold text-sm"
+            >
+              <RefreshCw className={cn("size-4", refreshing && "animate-spin")} /> Retry
+            </button>
+          </div>
+        )}
+        {!sessionError && pane === "learn" && (
           <LearnReels
             user={user}
             session={session}

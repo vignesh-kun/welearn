@@ -21,13 +21,28 @@ export default function Page() {
   const [streak, setStreak] = useState(0)
 
   useEffect(() => {
-    // Restore session from localStorage after mount (deferred to keep hydration clean)
+    // Restore session from localStorage after mount, then validate it against DB
     let cancelled = false
-    Promise.resolve().then(() => {
+    Promise.resolve().then(async () => {
       if (cancelled) return
       const s = loadSession()
-      if (s) setUser(s)
-      setReady(true)
+      if (s) {
+        // Validate session ID still exists in DB (handles DB reseeds / stale sessions)
+        try {
+          const res = await fetch(`/api/auth/validate?userId=${s.id}`)
+          if (res.ok) {
+            const fresh = await res.json()
+            if (!cancelled) setUser({ id: fresh.id, name: fresh.name, role: fresh.role })
+          } else {
+            // Session expired / user deleted — clear and show auth screen
+            clearSession()
+          }
+        } catch {
+          // Network error — still restore from localStorage optimistically
+          if (!cancelled) setUser(s)
+        }
+      }
+      if (!cancelled) setReady(true)
     })
     return () => {
       cancelled = true
